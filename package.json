@@ -1,0 +1,55 @@
+{
+    "name": "@flowfuse/nr-remote-agent",
+    "version": "4.0.0",
+    "description": "A Node-RED plugin that enables Node-RED to be managed by FlowFuse",
+    "scripts": {
+        "build": "rollup -c",
+        "watch": "rollup --watch -c",
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "lint": "eslint -c eslint.config.mjs --ext js,html \"src/**/*.js\"",
+        "lint:fix": "eslint -c eslint.config.mjs --ext js,html \"src/**/*.js\" --fix"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/FlowFuse/nr-remote-agent.git"
+    },
+    "author": "FlowFuse Inc.",
+    "license": "Apache-2.0",
+    "bugs": {
+        "url": "https://github.com/FlowFuse/nr-remote-agent/issues"
+    },
+    "homepage": "https://flowfuse.com/docs/migration/node-red-remote-agent/",
+    "node-red": {
+        "plugins": {
+            "flowfuse-nr-remote-agent": "dist/plugin.js"
+        }
+    },
+    "keywords": [
+        "flowfuse",
+        "node-red"
+    ],
+    "engines": {
+        "node": ">=22.x"
+    },
+    "dependencies": {
+        "undici": "^6.29.0",
+        "mqtt": "^5.16.0"
+    },
+    "devDependencies": {
+        "@rollup/plugin-terser": "^1.0.0",
+        "cssnano": "^9.1.2",
+        "@eslint/js": "^9.39.2",
+        "eslint": "^9.39.5",
+        "eslint-plugin-no-only-tests": "^3.3.0",
+        "eslint-plugin-html": "8.2.1",
+        "neostandard": "^0.13.0",
+        "fast-glob": "^3.2.12",
+        "rollup": "^4.63.6",
+        "rollup-plugin-copy": "^3.5.0",
+        "rollup-plugin-postcss": "^4.0.2"
+    },
+    "files": [
+        "dist",
+        "resources"
+    ]
+}
