@@ -1,0 +1,63 @@
+import globals from 'globals'
+import js from '@eslint/js'
+import neostandard, { resolveIgnoresFromGitignore } from 'neostandard'
+import stylistic from '@stylistic/eslint-plugin'
+import noOnlyTests from 'eslint-plugin-no-only-tests'
+
+export default [
+    {
+        files: ['**/*.js'],
+        languageOptions: {
+            globals: {
+                ...globals.browser
+            },
+            sourceType: 'script'
+        }
+    },
+    {
+        files: ['test/**/*.js'],
+        languageOptions: {
+            globals: {
+                ...globals.browser,
+                ...globals.mocha
+            },
+            sourceType: 'script'
+        }
+    },
+    {
+        ignores: [
+            ...resolveIgnoresFromGitignore()
+        ]
+    },
+    {
+        // re-include 1st party plugin source bundled under nested node_modules because
+        // eslint's default `**/node_modules/` global ignore causes it to be skipped
+        // Note: both entries are required as eslint prunes without descending so it
+        // has to be specific enough that gitignore derived ignores don't re-add it back in.
+        ignores: ['!**/lib/plugins/node_modules', '!**/lib/plugins/node_modules/**']
+    },
+    js.configs.recommended,
+    ...neostandard(),
+    {
+        plugins: {
+            '@stylistic': stylistic,
+            'no-only-tests': noOnlyTests
+        },
+        rules: {
+            // built-in
+            eqeqeq: 'error',
+            'object-shorthand': ['error'],
+            'no-console': ['error', { allow: ['debug', 'info', 'warn', 'error'] }],
+            quotes: ['off', 'error', 'single', { avoidEscape: true }],
+
+            // plugin:stylistic
+            '@stylistic/indent': ['warn', 4], // https://eslint.style/rules/indent#options
+            '@stylistic/spaced-comment': ['error', 'always'], // https://eslint.style/rules/spaced-comment
+            '@stylistic/no-multi-spaces': 'error', // https://eslint.style/rules/no-multi-spaces#no-multi-spaces
+            '@stylistic/comma-dangle': ['error', 'never'], // https://eslint.style/rules/comma-dangle#comma-dangle
+
+            // plugin:no-only-tests
+            'no-only-tests/no-only-tests': 'error'
+        }
+    }
+]
