@@ -1,0 +1,29 @@
+name: Release Published
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24
+      - run: npm install
+      - run: npm run build
+      - uses: JS-DevTools/npm-publish@0fd2f4369c5d6bcfcde6091a7c527d810b9b5c3f # v4.1.5
+        with:
+          token: ${{ secrets.NPM_PUBLISH_TOKEN }}
+          access: public
+      - name: getVersion
+        id: getVersion
+        shell: bash
+        run: |
+          echo "version=${{ github.ref_name }} >> $GITHUB_OUTPUT
+      - uses: flowfuse/github-actions-workflows/actions/update-nr-flows@update-nr-flows/v1
+        with:
+          package: '@flowfuse/nr-tools-plugin'
+          version: ${{ steps.getVersion.outputs.version }}
