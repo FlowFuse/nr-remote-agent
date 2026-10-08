@@ -184,16 +184,20 @@ class Agent {
     async sendAuditEvent (msg) {
         const token = settings.get('credentials')?.token
         if (token) {
-            this.debug(`Sending audit event ${JSON.stringify(msg)}`)
-            return ffPost(
-                this.auditUrl,
-                msg,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`
+            try {
+                this.debug(`Sending audit event ${JSON.stringify(msg)}`)
+                await ffPost(
+                    this.auditUrl,
+                    msg,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        }
                     }
-                }
-            )
+                )
+            } catch (err) {
+                this.error(`Failed to send audit event: ${err.toString()}`)
+            }
         }
     }
 
