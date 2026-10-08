@@ -106,10 +106,12 @@ class MqttAgentClient {
         if (!payload) {
             return
         }
-        this.agent.debug('Sending status message')
-        this.agent.debug(this.statusTopic)
-        this.agent.debug(JSON.stringify(payload))
-        this.client.publish(this.statusTopic, JSON.stringify(payload))
+        if (this.client.connected) {
+            this.agent.debug('Sending status message')
+            this.agent.debug(this.statusTopic)
+            this.agent.debug(JSON.stringify(payload))
+            this.client.publish(this.statusTopic, JSON.stringify(payload))
+        }
     }
 
     sendCommandResponse (request, response) {
@@ -139,7 +141,9 @@ class MqttAgentClient {
     }
 
     publishToLogStream (logMessage) {
-        this.client.publish(this.logTopic, JSON.stringify(logMessage))
+        if (this.client.connected) {
+            this.client.publish(this.logTopic, JSON.stringify(logMessage))
+        }
     }
 }
 

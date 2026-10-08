@@ -8,6 +8,9 @@ Unlike the [FlowFuse Device Agent](https://github.com/FlowFuse/device-agent), th
 the plugin adds a connection to FlowFuse so the instance can be seen and managed alongside the
 rest of your team's instances.
 
+## Documentation
+
+ - [FlowFuse Remote Agent Plugin documentation](https://flowfuse.com/docs/device-agent/plugin/overview/)
 
 ## Requirements
 
