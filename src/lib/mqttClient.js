@@ -3,6 +3,12 @@ const mqtt = require('mqtt')
 const { randomInt } = require('crypto')
 const { IntervalJitter } = require('./utils/IntervalJitter')
 
+// When the broker is unreachable, we keep retrying at the normal reconnect period
+// but back off how often the failure is logged: the first failure is logged
+// immediately, then reminders are logged at increasing intervals up to the max.
+const ERROR_LOG_INITIAL_INTERVAL = 5 * 60 * 1000 // 5 minutes
+const ERROR_LOG_MAX_INTERVAL = 30 * 60 * 1000 // 30 minutes
+
 class MqttAgentClient {
     constructor (RED, agent) {
         this.RED = RED
@@ -14,6 +20,14 @@ class MqttAgentClient {
         this.logTopic = `ff/v1/${this.agent.teamId}/d/${this.agent.deviceId}/logs`
         this.resourcesTopic = `ff/v1/${this.agent.teamId}/d/${this.agent.deviceId}/resources`
         this.responseTopic = `ff/v1/${this.agent.teamId}/d/${this.agent.deviceId}/response`
+        this.resetConnectionErrorState()
+    }
+
+    resetConnectionErrorState () {
+        this.connectionFailures = 0
+        this.lastErrorMessage = null
+        this.lastErrorLogTime = 0
+        this.errorLogInterval = ERROR_LOG_INITIAL_INTERVAL
     }
 
     connect () {
@@ -36,26 +50,53 @@ class MqttAgentClient {
         this.RED.comms.publish('flowfuse-remote-agent/state', { state: 'connecting' }, true)
         this.client = mqtt.connect(opts)
         this.client.on('connect', () => {
-            this.agent.log('Connected to FlowFuse')
+            if (this.connectionFailures > 1) {
+                this.agent.log(`Connected to FlowFuse after ${this.connectionFailures} failed attempts`)
+            } else {
+                this.agent.log('Connected to FlowFuse')
+            }
+            this.resetConnectionErrorState()
             this.RED.comms.publish('flowfuse-remote-agent/state', { state: 'connected' }, true)
             this.publish(this.statusTopic, JSON.stringify(this.agent.getState()))
         })
         this.client.on('close', () => { })
         this.client.on('reconnect', () => {
             this.RED.comms.publish('flowfuse-remote-agent/state', { state: 'connecting' }, true)
-            this.agent.log('Reconnecting to FlowFuse')
+            if (this.connectionFailures === 0) {
+                this.agent.log('Reconnecting to FlowFuse')
+            } else {
+                this.agent.debug('Reconnecting to FlowFuse')
+            }
         })
         this.client.on('error', (err) => {
             // this.RED.comms.publish('flowfuse-remote-agent/state', { state: 'error' }, true)
-            // TODO: tidy up error reporting
+            this.connectionFailures++
+            let messages
             if (err.cause) {
-                this.agent.warn(`Connection error: ${err.cause.toString()}`)
+                messages = [err.cause.toString()]
             } else if (err.errors && Array.isArray(err.errors)) {
-                for (const e in err.errors) {
-                    this.agent.warn(`Connection error: ${err.errors[e].toString()}`)
-                }
+                messages = err.errors.map(e => e.toString())
             } else {
-                this.agent.warn(`Connection error: ${err.toString()}`)
+                messages = [err.toString()]
+            }
+            const errorMessage = messages.join(', ')
+            const now = Date.now()
+            const errorChanged = errorMessage !== this.lastErrorMessage
+            if (errorChanged || now - this.lastErrorLogTime >= this.errorLogInterval) {
+                const suffix = this.connectionFailures > 1 ? ` (${this.connectionFailures} failed attempts, still retrying)` : ''
+                for (const message of messages) {
+                    this.agent.warn(`Connection error: ${message}${suffix}`)
+                }
+                if (!errorChanged) {
+                    // Same error is persisting - wait longer before logging it again
+                    this.errorLogInterval = Math.min(this.errorLogInterval * 2, ERROR_LOG_MAX_INTERVAL)
+                }
+                this.lastErrorMessage = errorMessage
+                this.lastErrorLogTime = now
+            } else {
+                for (const message of messages) {
+                    this.agent.debug(`Connection error: ${message}`)
+                }
             }
         })
 
