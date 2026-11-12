@@ -62,7 +62,10 @@ function refreshContent () {
         $('<span>').text(settings.team?.name).appendTo(propCell)
 
         propRow = $('<tr class="red-ui-help-info-row"><td>Name</td><td></td></tr>').appendTo(tableBody)
-        $(propRow.children()[1]).text(settings.name)
+        const nameCell = $('<div>').css({ display: 'flex', 'align-items': 'center', 'justify-content': 'space-between' }).appendTo($(propRow.children()[1]))
+        $('<span>').text(settings.name).appendTo(nameCell)
+        const deviceHomeUrl = joinURL(settings.forgeURL || 'https://app.flowfuse.com', '/device/' + settings.deviceId)
+        $('<a target="_blank" style="margin-left: 10px; margin-right: 10px;">View on FlowFuse </a>').attr('href', deviceHomeUrl).appendTo(nameCell)
 
         propRow = $('<tr class="red-ui-help-info-row"><td>Connection</td><td></td></tr>').appendTo(tableBody)
         $(propRow.children()[1]).text(getState())
@@ -118,6 +121,16 @@ function getSettingsPane () {
     })
     refreshContent()
     return settingsPane
+}
+
+function joinURL (base, path) {
+    if (base.endsWith('/')) {
+        base = base.slice(0, -1)
+    }
+    if (!path.startsWith('/')) {
+        path = '/' + path
+    }
+    return base + path
 }
 
 export {
