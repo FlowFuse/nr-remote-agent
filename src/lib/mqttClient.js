@@ -114,6 +114,10 @@ class MqttAgentClient {
                     this.agent.startLogStream()
                 } else if (command.command === 'stopLog') {
                     this.agent.stopLogStream()
+                } else if (command.command === 'startResources') {
+                    this.agent.startResourceStream()
+                } else if (command.command === 'stopResources') {
+                    this.agent.stopResourceStream()
                 } else if (command.command === 'upload') {
                     const snapshot = await this.agent.generateSnapshot()
                     this.sendCommandResponse(command, snapshot)
@@ -184,6 +188,12 @@ class MqttAgentClient {
     publishToLogStream (logMessage) {
         if (this.client.connected) {
             this.client.publish(this.logTopic, JSON.stringify(logMessage))
+        }
+    }
+
+    publishToResourceStream (sample) {
+        if (this.client.connected) {
+            this.client.publish(this.resourcesTopic, JSON.stringify(sample))
         }
     }
 }
