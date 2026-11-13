@@ -125,11 +125,19 @@ class Agent {
     }
 
     startLogStream () {
-        this.logHandler.enable()
+        this.logHandler.startLogStream()
     }
 
     stopLogStream () {
-        this.logHandler.disable()
+        this.logHandler.stopLogStream()
+    }
+
+    startResourceStream () {
+        this.logHandler.startResourceStream()
+    }
+
+    stopResourceStream () {
+        this.logHandler.stopResourceStream()
     }
 
     async register (otc) {
@@ -172,7 +180,8 @@ class Agent {
 
     async unregister () {
         this.log('Unregistering agent')
-        this.logHandler.disable()
+        this.stopLogStream()
+        this.stopResourceStream()
         this.mqttClient?.disconnect()
         this.mqttClient = null
         settings.reset()
