@@ -18,7 +18,7 @@
     "bugs": {
         "url": "https://github.com/FlowFuse/nr-remote-agent/issues"
     },
-    "homepage": "https://flowfuse.com/docs/migration/node-red-remote-agent/",
+    "homepage": "https://flowfuse.com/docs/device-agent/plugin/overview/",
     "node-red": {
         "plugins": {
             "flowfuse-nr-remote-agent": "dist/plugin.js"
