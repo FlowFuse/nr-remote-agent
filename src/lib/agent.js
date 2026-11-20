@@ -15,6 +15,8 @@ function isDifferent (a, b) {
     return (a ?? null) !== (b ?? null)
 }
 
+const RESTART_AVAILABLE = process.execve !== undefined
+
 class Agent {
     constructor (RED) {
         this.RED = RED
@@ -207,6 +209,62 @@ class Agent {
             } catch (err) {
                 this.error(`Failed to send audit event: ${err.toString()}`)
             }
+        }
+    }
+
+    async handleActionRequest (command) {
+        this.debug(`Handling action request: ${JSON.stringify(command)}`)
+        const action = command.payload?.action || ''
+        try {
+            let result = false
+            let error = null
+            switch (action) {
+                case 'restart': {
+                    this.log('Node-RED restart requested')
+                    const response = this.mqttClient.buildCommandResponse(command, { success: true })
+                    if (response) {
+                        // response is a object.
+                        // TODO: stringify and base64 encode
+                        const responseJSON = JSON.stringify(response)
+                        const base64Response = Buffer.from(responseJSON).toString('base64')
+                        this.restartNodeRED({ env: { FF_REMOTE_AGENT_CMD_RESPONSE: base64Response } })
+                    }
+                    result = true
+                    break
+                }
+                default:
+                    error = new Error(`Unsupported action requested: ${action}`)
+                    error.code = 'unsupported_action'
+                    throw error
+            }
+            if (result) {
+                this.mqttClient.sendCommandResponse(command, { success: result })
+            } else {
+                throw new Error('Requested action ' + action + ' failed')
+            }
+        } catch (err) {
+            this.warn(err.toString())
+            this.debug(err)
+            const error = {
+                message: err.toString(),
+                code: err.code || 'unexpected_error',
+                error: err.message || 'Unexpected error'
+            }
+            this.mqttClient.sendCommandResponse(command, { success: false, error })
+        }
+    }
+
+    restartNodeRED (options = {}) {
+        if (!RESTART_AVAILABLE) {
+            const msg = `Unable to restart Node-RED in this environment: Node.js ${process.version} ${os.platform()} ${os.arch()}`
+            throw new Error(msg)
+        }
+        try {
+            const args = [process.execPath, ...process.execArgv, ...process.argv.slice(1)]
+            process.execve(process.execPath, args, { ...process.env, ...options.env })
+        } catch (err) {
+            const msg = `Failed to restart Node-RED: Node.js ${process.version} ${os.platform()} ${os.arch()} : ${err.toString()}`
+            throw new Error(msg)
         }
     }
 
