@@ -57,6 +57,18 @@ class MqttAgentClient {
             }
             this.resetConnectionErrorState()
             this.RED.comms.publish('flowfuse-remote-agent/state', { state: 'connected' }, true)
+            if (process.env.FF_REMOTE_AGENT_CMD_RESPONSE) {
+                // If the process was restarted due to a command, send the response to the broker now that we're connected
+                const base64Response = process.env.FF_REMOTE_AGENT_CMD_RESPONSE
+                delete process.env.FF_REMOTE_AGENT_CMD_RESPONSE
+                const responseJSON = Buffer.from(base64Response, 'base64').toString('utf-8')
+                try {
+                    const response = JSON.parse(responseJSON)
+                    this.client.publish(response.topic, JSON.stringify(response.payload))
+                } catch (err) {
+                    this.agent.warn(`Failed to parse command response from environment variable: ${err}`)
+                }
+            }
             this.publish(this.statusTopic, JSON.stringify(this.agent.getState()))
         })
         this.client.on('close', () => { })
@@ -121,6 +133,8 @@ class MqttAgentClient {
                 } else if (command.command === 'upload') {
                     const snapshot = await this.agent.generateSnapshot()
                     this.sendCommandResponse(command, snapshot)
+                } else if (command.command === 'action') {
+                    await this.agent.handleActionRequest(command)
                 }
             }
         })
@@ -159,7 +173,7 @@ class MqttAgentClient {
         }
     }
 
-    sendCommandResponse (request, response) {
+    buildCommandResponse (request, response) {
         const correlationData = request?.correlationData
         const responseTopic = request?.responseTopic || this.responseTopic
         const userProperties = request?.userProperties || {}
@@ -177,10 +191,21 @@ class MqttAgentClient {
             userProperties, // for any additional metadata
             payload: response // the actual response payload
         }
-        const messageJSON = JSON.stringify(message)
-        this.client.publish(responseTopic, messageJSON, (err) => {
+        return {
+            topic: responseTopic,
+            payload: message
+        }
+    }
+
+    sendCommandResponse (request, response) {
+        const message = this.buildCommandResponse(request, response)
+        if (!message) {
+            return
+        }
+        const messageJSON = JSON.stringify(message.payload)
+        this.client.publish(message.topic, messageJSON, (err) => {
             if (err) {
-                this.agent.warn(`Error sending response to command ${command}: ${err}`)
+                this.agent.warn(`Error sending response to command ${request?.command}: ${err}`)
             }
         })
     }
